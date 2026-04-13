@@ -61,9 +61,9 @@ export default function ClientResultsTable() {
       <Table size="small">
         <TableHead>
           <TableRow>
-            {header("account_name", "account_name")}
-            {header("total_spent", "total_spent", "right")}
-            {header("total_conversions", "total_conversions", "right")}
+            {header("account_name", "Account Name")}
+            {header("total_spent", "Total Spent", "right")}
+            {header("total_conversions", "Total Conversions", "right")}
             {header("cpa", "CPA", "right")}
           </TableRow>
         </TableHead>
