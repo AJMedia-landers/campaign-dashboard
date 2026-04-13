@@ -43,7 +43,7 @@ function computePreset(key: PresetKey, includeToday: boolean): DateRange | null 
     case "yesterday":
       return { start: today.subtract(1, "day"), end: today.subtract(1, "day") };
     case "thisMonth":
-      return { start: today.startOf("month"), end };
+      return { start: today.startOf("month"), end: today.endOf("month").startOf("day") };
     case "last7":
       return { start: end.subtract(6, "day"), end };
     case "last30":

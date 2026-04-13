@@ -1,8 +1,20 @@
 "use client";
-import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel } from "@mui/material";
+import {
+  Box,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
+  TableSortLabel,
+} from "@mui/material";
 import { fmtCurrency, fmtCpa, fmtNumber } from "@/lib/format";
 import { creatives, type CreativeRow } from "@/data/mockDashboard";
 import { useSortable } from "@/lib/useSortable";
+import { useTablePagination } from "@/lib/useTablePagination";
 
 const headSx = { bgcolor: "primary.main", color: "#fff", fontWeight: 700 };
 const sortSx = {
@@ -16,6 +28,16 @@ type SortKey = Exclude<keyof CreativeRow, "image">;
 
 export default function CreativesTable() {
   const { sorted, sort, toggle } = useSortable<CreativeRow, SortKey>(creatives, "spent", "desc");
+  const {
+    page,
+    rowsPerPage,
+    handleChangePage,
+    handleChangeRowsPerPage,
+    paginate,
+    rowsPerPageOptions,
+  } = useTablePagination(sorted.length);
+  const visible = paginate(sorted);
+  const startIndex = rowsPerPage === -1 ? 0 : page * rowsPerPage;
 
   const header = (key: SortKey, label: string, align: "left" | "right" = "left") => (
     <TableCell sx={{ ...headSx, ...sortSx }} align={align} sortDirection={sort?.key === key ? sort.dir : false}>
@@ -39,9 +61,9 @@ export default function CreativesTable() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {sorted.map((r, idx) => (
+          {visible.map((r, idx) => (
             <TableRow key={r.rank} hover>
-              <TableCell sx={{ color: "text.secondary" }}>{idx + 1}.</TableCell>
+              <TableCell sx={{ color: "text.secondary" }}>{startIndex + idx + 1}.</TableCell>
               <TableCell align="center">
                 <Box
                   component="img"
@@ -58,6 +80,15 @@ export default function CreativesTable() {
           ))}
         </TableBody>
       </Table>
+      <TablePagination
+        component="div"
+        count={sorted.length}
+        page={page}
+        onPageChange={handleChangePage}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        rowsPerPageOptions={rowsPerPageOptions}
+      />
     </TableContainer>
   );
 }

@@ -1,15 +1,17 @@
 "use client";
 import { Box, MenuItem, Select, Typography } from "@mui/material";
-import { useMemo, useState } from "react";
-import dayjs from "dayjs";
-import DateRangePicker, { DateRange } from "./DateRangePicker";
+import { useMemo } from "react";
+import DateRangePicker from "./DateRangePicker";
 import SearchableSelect, { SelectOption } from "./SearchableSelect";
 import { useAccounts } from "@/lib/useAccounts";
-
-const ALL_PLATFORM = "All";
-const ALL_ACCOUNT_ID = "__all__";
+import {
+  ALL_ACCOUNT_ID,
+  ALL_PLATFORM,
+  useDashboardFilters,
+} from "@/lib/DashboardFiltersContext";
 
 export default function FiltersBar() {
+  const { platform, accountId, range, setPlatform, setAccount, setRange } = useDashboardFilters();
   const { data: accounts = [], isLoading, isError } = useAccounts();
 
   const platformOptions = useMemo(() => {
@@ -19,13 +21,6 @@ export default function FiltersBar() {
     }
     return [ALL_PLATFORM, ...Array.from(set).sort()];
   }, [accounts]);
-
-  const [platform, setPlatform] = useState<string>(ALL_PLATFORM);
-  const [accountId, setAccountId] = useState<string>(ALL_ACCOUNT_ID);
-  const [range, setRange] = useState<DateRange>({
-    start: dayjs("2026-03-14"),
-    end: dayjs("2026-04-12"),
-  });
 
   const accountOptions = useMemo<SelectOption[]>(() => {
     const filtered =
@@ -38,9 +33,9 @@ export default function FiltersBar() {
     ];
   }, [accounts, platform]);
 
-  const onPlatformChange = (v: string) => {
-    setPlatform(v);
-    setAccountId(ALL_ACCOUNT_ID);
+  const onAccountChange = (id: string) => {
+    const picked = accountOptions.find((o) => o.id === id);
+    setAccount(id, picked?.label ?? null);
   };
 
   return (
@@ -54,7 +49,7 @@ export default function FiltersBar() {
       <Select
         size="small"
         value={platform}
-        onChange={(e) => onPlatformChange(e.target.value)}
+        onChange={(e) => setPlatform(e.target.value)}
         disabled={isLoading}
         sx={{ minWidth: 180, bgcolor: "background.paper" }}
         renderValue={(v) => (
@@ -74,7 +69,7 @@ export default function FiltersBar() {
         label="Accounts"
         value={accountId}
         options={accountOptions}
-        onChange={setAccountId}
+        onChange={onAccountChange}
         disabled={isLoading}
         placeholder="Search accounts…"
         minWidth={260}

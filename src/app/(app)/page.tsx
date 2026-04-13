@@ -1,13 +1,15 @@
 import { Box, Container, Typography } from "@mui/material";
 import FiltersBar from "@/components/FiltersBar";
-import StatCard from "@/components/StatCard";
+import SummaryCards from "@/components/SummaryCards";
 import ClientResultsTable from "@/components/ClientResultsTable";
 import HeadlinesTable from "@/components/HeadlinesTable";
 import CreativesTable from "@/components/CreativesTable";
-import { lastSync, summary } from "@/data/mockDashboard";
+import { lastSync } from "@/data/mockDashboard";
+import { DashboardFiltersProvider } from "@/lib/DashboardFiltersContext";
 
 export default function DashboardHome() {
   return (
+    <DashboardFiltersProvider>
     <Container maxWidth="xl" sx={{ py: 3 }}>
       <FiltersBar />
 
@@ -25,18 +27,7 @@ export default function DashboardHome() {
         </Box>
       </Box>
 
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" },
-          gap: 2,
-          mb: 3,
-        }}
-      >
-        {summary.map((s) => (
-          <StatCard key={s.label} stat={s} />
-        ))}
-      </Box>
+      <SummaryCards />
 
       <Box sx={{ mb: 4 }}>
         <ClientResultsTable />
@@ -56,5 +47,6 @@ export default function DashboardHome() {
         <CreativesTable />
       </Box>
     </Container>
+    </DashboardFiltersProvider>
   );
 }
