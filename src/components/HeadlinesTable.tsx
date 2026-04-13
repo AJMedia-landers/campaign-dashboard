@@ -1,5 +1,6 @@
 "use client";
 import {
+  CircularProgress,
   Paper,
   Table,
   TableBody,
@@ -9,10 +10,12 @@ import {
   TablePagination,
   TableRow,
   TableSortLabel,
+  Typography,
 } from "@mui/material";
 import { fmtCurrency, fmtCpa, fmtNumber } from "@/lib/format";
-import { headlines, type HeadlineRow } from "@/data/mockDashboard";
 import { useSortable } from "@/lib/useSortable";
+import { useHeadlineResults, type HeadlineRow } from "@/lib/useHeadlineResults";
+import { fmtDate, useDashboardFilters } from "@/lib/DashboardFiltersContext";
 import { useTablePagination } from "@/lib/useTablePagination";
 
 const headSx = { bgcolor: "primary.main", color: "#fff", fontWeight: 700 };
@@ -26,7 +29,15 @@ const sortSx = {
 type SortKey = keyof HeadlineRow;
 
 export default function HeadlinesTable() {
-  const { sorted, sort, toggle } = useSortable<HeadlineRow, SortKey>(headlines, "spent", "desc");
+  const { platform, accountName, range } = useDashboardFilters();
+  const { data = [], isLoading, isError, error } = useHeadlineResults({
+    startDate: fmtDate(range.start),
+    endDate: fmtDate(range.end),
+    platform: platform === "All" ? undefined : platform.toLowerCase(),
+    accountName: accountName ?? undefined,
+  });
+
+  const { sorted, sort, toggle } = useSortable<HeadlineRow, SortKey>(data, "spent", "desc");
   const {
     page,
     rowsPerPage,
@@ -59,15 +70,41 @@ export default function HeadlinesTable() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {visible.map((r, idx) => (
-            <TableRow key={r.rank} hover>
-              <TableCell sx={{ color: "text.secondary" }}>{startIndex + idx + 1}.</TableCell>
-              <TableCell>{r.headline}</TableCell>
-              <TableCell align="right">{fmtCurrency(r.spent)}</TableCell>
-              <TableCell align="right">{fmtNumber(r.conversions)}</TableCell>
-              <TableCell align="right">{fmtCpa(r.cpa)}</TableCell>
+          {isLoading && (
+            <TableRow>
+              <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                <CircularProgress size={20} />
+              </TableCell>
             </TableRow>
-          ))}
+          )}
+          {!isLoading && isError && (
+            <TableRow>
+              <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                <Typography variant="body2" color="error">
+                  {(error as Error)?.message ?? "Failed to load data"}
+                </Typography>
+              </TableCell>
+            </TableRow>
+          )}
+          {!isLoading && !isError && sorted.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                <Typography variant="body2" color="text.secondary">
+                  No headlines for the selected filters
+                </Typography>
+              </TableCell>
+            </TableRow>
+          )}
+          {!isLoading && !isError &&
+            visible.map((r, idx) => (
+              <TableRow key={`${startIndex + idx}-${r.headline}`} hover>
+                <TableCell sx={{ color: "text.secondary" }}>{startIndex + idx + 1}.</TableCell>
+                <TableCell>{r.headline}</TableCell>
+                <TableCell align="right">{fmtCurrency(r.spent)}</TableCell>
+                <TableCell align="right">{fmtNumber(r.conversions)}</TableCell>
+                <TableCell align="right">{fmtCpa(r.cpa)}</TableCell>
+              </TableRow>
+            ))}
         </TableBody>
       </Table>
       <TablePagination
