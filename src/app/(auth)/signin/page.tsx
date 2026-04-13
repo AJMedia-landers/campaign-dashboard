@@ -2,14 +2,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Button, TextField, Typography, Link as MuiLink, IconButton, InputAdornment, Alert, Snackbar } from "@mui/material";
-import { useSocket } from "@/providers/SocketProvider";
 import Link from "next/link";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 export default function SignInPage() {
   const router = useRouter();
-  const { setSocketToken } = useSocket();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +28,6 @@ export default function SignInPage() {
       });
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.message || "Login failed");
-      setSocketToken(json.data.token);
       setOkOpen(true);
       setTimeout(() => router.replace("/"), 700);
     } catch (e: any) {

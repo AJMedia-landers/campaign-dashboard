@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Button, TextField, Typography, Link as MuiLink, IconButton, InputAdornment, Alert, Snackbar } from "@mui/material";
-import { useSocket } from "@/providers/SocketProvider";
 
 import Link from "next/link";
 import Visibility from "@mui/icons-material/Visibility";
@@ -10,7 +9,6 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 export default function SignUpPage() {
   const router = useRouter();
-  const { setSocketToken } = useSocket();
 
   const [first_name, setFirst] = useState("");
   const [last_name, setLast] = useState("");
@@ -33,7 +31,6 @@ export default function SignUpPage() {
       });
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.message || "Sign up failed");
-      setSocketToken(json.data.token);
       setOkOpen(true);
       setTimeout(() => router.replace("/"), 700);
     } catch (e: any) {
