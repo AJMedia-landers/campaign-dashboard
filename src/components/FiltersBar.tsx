@@ -1,25 +1,62 @@
 "use client";
-import { Box, MenuItem, Select } from "@mui/material";
-import { useState } from "react";
+import { Box, MenuItem, Select, Typography } from "@mui/material";
+import { useMemo, useState } from "react";
 import dayjs from "dayjs";
-import { accountOptions, platformOptions } from "@/data/mockDashboard";
 import DateRangePicker, { DateRange } from "./DateRangePicker";
+import SearchableSelect, { SelectOption } from "./SearchableSelect";
+import { useAccounts } from "@/lib/useAccounts";
+
+const ALL_PLATFORM = "All";
+const ALL_ACCOUNT_ID = "__all__";
 
 export default function FiltersBar() {
-  const [platform, setPlatform] = useState(platformOptions[0]);
-  const [account, setAccount] = useState(accountOptions[0]);
+  const { data: accounts = [], isLoading, isError } = useAccounts();
+
+  const platformOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of accounts) {
+      if (a.platform) set.add(a.platform.charAt(0).toUpperCase() + a.platform.slice(1));
+    }
+    return [ALL_PLATFORM, ...Array.from(set).sort()];
+  }, [accounts]);
+
+  const [platform, setPlatform] = useState<string>(ALL_PLATFORM);
+  const [accountId, setAccountId] = useState<string>(ALL_ACCOUNT_ID);
   const [range, setRange] = useState<DateRange>({
     start: dayjs("2026-03-14"),
     end: dayjs("2026-04-12"),
   });
 
+  const accountOptions = useMemo<SelectOption[]>(() => {
+    const filtered =
+      platform === ALL_PLATFORM
+        ? accounts
+        : accounts.filter((a) => a.platform.toLowerCase() === platform.toLowerCase());
+    return [
+      { id: ALL_ACCOUNT_ID, label: "All Accounts" },
+      ...filtered.map((a) => ({ id: a.id, label: a.name, hint: a.platform })),
+    ];
+  }, [accounts, platform]);
+
+  const onPlatformChange = (v: string) => {
+    setPlatform(v);
+    setAccountId(ALL_ACCOUNT_ID);
+  };
+
   return (
-    <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end", flexWrap: "wrap", mb: 2 }}>
+    <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap", mb: 2 }}>
+      {isError && (
+        <Typography variant="caption" color="error" sx={{ mr: 1 }}>
+          Couldn't load accounts
+        </Typography>
+      )}
+
       <Select
         size="small"
         value={platform}
-        onChange={(e) => setPlatform(e.target.value)}
-        sx={{ minWidth: 170, bgcolor: "background.paper" }}
+        onChange={(e) => onPlatformChange(e.target.value)}
+        disabled={isLoading}
+        sx={{ minWidth: 180, bgcolor: "background.paper" }}
         renderValue={(v) => (
           <span style={{ color: "rgba(0,0,0,0.6)" }}>
             Platform Type: <b style={{ color: "#2D2A28" }}>{v}</b>
@@ -32,23 +69,18 @@ export default function FiltersBar() {
           </MenuItem>
         ))}
       </Select>
-      <Select
-        size="small"
-        value={account}
-        onChange={(e) => setAccount(e.target.value)}
-        sx={{ minWidth: 200, bgcolor: "background.paper" }}
-        renderValue={(v) => (
-          <span style={{ color: "rgba(0,0,0,0.6)" }}>
-            Accounts: <b style={{ color: "#2D2A28" }}>{v}</b>
-          </span>
-        )}
-      >
-        {accountOptions.map((o) => (
-          <MenuItem key={o} value={o}>
-            {o}
-          </MenuItem>
-        ))}
-      </Select>
+
+      <SearchableSelect
+        label="Accounts"
+        value={accountId}
+        options={accountOptions}
+        onChange={setAccountId}
+        disabled={isLoading}
+        placeholder="Search accounts…"
+        minWidth={260}
+        listWidth={340}
+      />
+
       <DateRangePicker value={range} onChange={setRange} />
     </Box>
   );
