@@ -1,12 +1,30 @@
 "use client";
-import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
-import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel } from "@mui/material";
 import { fmtCurrency, fmtCpa, fmtNumber } from "@/lib/format";
-import { creatives } from "@/data/mockDashboard";
+import { creatives, type CreativeRow } from "@/data/mockDashboard";
+import { useSortable } from "@/lib/useSortable";
 
 const headSx = { bgcolor: "primary.main", color: "#fff", fontWeight: 700 };
+const sortSx = {
+  "& .MuiTableSortLabel-root": { color: "#fff" },
+  "& .MuiTableSortLabel-root:hover": { color: "#fff" },
+  "& .MuiTableSortLabel-root.Mui-active": { color: "#fff" },
+  "& .MuiTableSortLabel-icon": { color: "#fff !important" },
+};
+
+type SortKey = Exclude<keyof CreativeRow, "image">;
 
 export default function CreativesTable() {
+  const { sorted, sort, toggle } = useSortable<CreativeRow, SortKey>(creatives, "spent", "desc");
+
+  const header = (key: SortKey, label: string, align: "left" | "right" = "left") => (
+    <TableCell sx={{ ...headSx, ...sortSx }} align={align} sortDirection={sort?.key === key ? sort.dir : false}>
+      <TableSortLabel active={sort?.key === key} direction={sort?.key === key ? sort.dir : "desc"} onClick={() => toggle(key)}>
+        {label}
+      </TableSortLabel>
+    </TableCell>
+  );
+
   return (
     <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
       <Table size="small">
@@ -14,18 +32,16 @@ export default function CreativesTable() {
           <TableRow>
             <TableCell sx={{ ...headSx, width: 32 }} />
             <TableCell sx={headSx} align="center">Image</TableCell>
-            <TableCell sx={headSx}>account_name</TableCell>
-            <TableCell sx={headSx} align="right">
-              Spent <ArrowDropDownIcon fontSize="small" sx={{ verticalAlign: "middle" }} />
-            </TableCell>
-            <TableCell sx={headSx} align="right">Conversions</TableCell>
-            <TableCell sx={headSx} align="right">CPA</TableCell>
+            {header("account_name", "account_name")}
+            {header("spent", "Spent", "right")}
+            {header("conversions", "Conversions", "right")}
+            {header("cpa", "CPA", "right")}
           </TableRow>
         </TableHead>
         <TableBody>
-          {creatives.map((r) => (
+          {sorted.map((r, idx) => (
             <TableRow key={r.rank} hover>
-              <TableCell sx={{ color: "text.secondary" }}>{r.rank}.</TableCell>
+              <TableCell sx={{ color: "text.secondary" }}>{idx + 1}.</TableCell>
               <TableCell align="center">
                 <Box
                   component="img"
