@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 export type HeadlineRow = {
   headline: string;
+  account_name: string | null;
   spent: number;
   conversions: number;
   cpa: number | null;

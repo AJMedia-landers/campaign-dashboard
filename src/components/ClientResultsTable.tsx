@@ -25,16 +25,24 @@ const sortSx = {
   "& .MuiTableSortLabel-root.Mui-active": { color: "#fff" },
   "& .MuiTableSortLabel-icon": { color: "#fff !important" },
 };
+const selectedRowSx = {
+  bgcolor: "rgba(191, 142, 113, 0.28) !important",
+  borderLeft: "4px solid",
+  borderLeftColor: "primary.dark",
+  "& td": { fontWeight: 700 },
+  "&:hover": { bgcolor: "rgba(191, 142, 113, 0.36) !important" },
+};
 
 type SortKey = keyof ClientRow;
 
 export default function ClientResultsTable() {
-  const { platform, accountName, range } = useDashboardFilters();
+  const { platform, accountName, range, selectAccountByName, selectionSource, effectiveAccountFor } = useDashboardFilters();
+  const effective = effectiveAccountFor("client");
   const { data = [], isLoading, isError, error } = useClientResults({
     startDate: fmtDate(range.start),
     endDate: fmtDate(range.end),
     platform: platform === "All" ? undefined : platform.toLowerCase(),
-    accountName: accountName ?? undefined,
+    accountName: effective ?? undefined,
   });
 
   const { sorted, sort, toggle } = useSortable<ClientRow, SortKey>(data, "total_spent", "desc");
@@ -94,14 +102,25 @@ export default function ClientResultsTable() {
             </TableRow>
           )}
           {!isLoading && !isError &&
-            visible.map((r) => (
-              <TableRow key={r.account_name} hover>
-                <TableCell>{r.account_name}</TableCell>
-                <TableCell align="right">{fmtCurrency(r.total_spent)}</TableCell>
-                <TableCell align="right">{fmtNumber(r.total_conversions)}</TableCell>
-                <TableCell align="right">{fmtCpa(r.cpa)}</TableCell>
-              </TableRow>
-            ))}
+            visible.map((r) => {
+              const isSelected = selectionSource === "client" && accountName === r.account_name;
+              return (
+                <TableRow
+                  key={r.account_name}
+                  hover
+                  onClick={() => selectAccountByName(r.account_name, "client")}
+                  sx={{
+                    cursor: "pointer",
+                    ...(isSelected ? selectedRowSx : {}),
+                  }}
+                >
+                  <TableCell>{r.account_name}</TableCell>
+                  <TableCell align="right">{fmtCurrency(r.total_spent)}</TableCell>
+                  <TableCell align="right">{fmtNumber(r.total_conversions)}</TableCell>
+                  <TableCell align="right">{fmtCpa(r.cpa)}</TableCell>
+                </TableRow>
+              );
+            })}
         </TableBody>
       </Table>
       <TablePagination

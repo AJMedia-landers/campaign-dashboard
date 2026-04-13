@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import {
   CircularProgress,
   Paper,
@@ -18,6 +19,14 @@ import { useHeadlineResults, type HeadlineRow } from "@/lib/useHeadlineResults";
 import { fmtDate, useDashboardFilters } from "@/lib/DashboardFiltersContext";
 import { useTablePagination } from "@/lib/useTablePagination";
 
+const selectedRowSx = {
+  bgcolor: "rgba(191, 142, 113, 0.28) !important",
+  borderLeft: "4px solid",
+  borderLeftColor: "primary.dark",
+  "& td": { fontWeight: 700 },
+  "&:hover": { bgcolor: "rgba(191, 142, 113, 0.36) !important" },
+};
+
 const headSx = { bgcolor: "primary.main", color: "#fff", fontWeight: 700 };
 const sortSx = {
   "& .MuiTableSortLabel-root": { color: "#fff" },
@@ -29,12 +38,20 @@ const sortSx = {
 type SortKey = keyof HeadlineRow;
 
 export default function HeadlinesTable() {
-  const { platform, accountName, range } = useDashboardFilters();
+  const { platform, accountName, range, selectAccountByName, selectionSource, effectiveAccountFor } = useDashboardFilters();
+  const effective = effectiveAccountFor("headlines");
+
+  // Track the *specific* clicked row (by headline string), not just the account,
+  // so duplicates of the same top-account don't all light up.
+  const [selectedHeadline, setSelectedHeadline] = useState<string | null>(null);
+  useEffect(() => {
+    if (selectionSource !== "headlines") setSelectedHeadline(null);
+  }, [selectionSource, accountName]);
   const { data = [], isLoading, isError, error } = useHeadlineResults({
     startDate: fmtDate(range.start),
     endDate: fmtDate(range.end),
     platform: platform === "All" ? undefined : platform.toLowerCase(),
-    accountName: accountName ?? undefined,
+    accountName: effective ?? undefined,
   });
 
   const { sorted, sort, toggle } = useSortable<HeadlineRow, SortKey>(data, "spent", "desc");
@@ -96,15 +113,31 @@ export default function HeadlinesTable() {
             </TableRow>
           )}
           {!isLoading && !isError &&
-            visible.map((r, idx) => (
-              <TableRow key={`${startIndex + idx}-${r.headline}`} hover>
-                <TableCell sx={{ color: "text.secondary" }}>{startIndex + idx + 1}.</TableCell>
-                <TableCell>{r.headline}</TableCell>
-                <TableCell align="right">{fmtCurrency(r.spent)}</TableCell>
-                <TableCell align="right">{fmtNumber(r.conversions)}</TableCell>
-                <TableCell align="right">{fmtCpa(r.cpa)}</TableCell>
-              </TableRow>
-            ))}
+            visible.map((r, idx) => {
+              const clickable = !!r.account_name;
+              const isSelected = r.headline === selectedHeadline;
+              return (
+                <TableRow
+                  key={`${startIndex + idx}-${r.headline}`}
+                  hover
+                  onClick={() => {
+                    if (!clickable) return;
+                    setSelectedHeadline(r.headline);
+                    selectAccountByName(r.account_name!, "headlines");
+                  }}
+                  sx={{
+                    cursor: clickable ? "pointer" : "default",
+                    ...(isSelected ? selectedRowSx : {}),
+                  }}
+                >
+                  <TableCell sx={{ color: "text.secondary" }}>{startIndex + idx + 1}.</TableCell>
+                  <TableCell>{r.headline}</TableCell>
+                  <TableCell align="right">{fmtCurrency(r.spent)}</TableCell>
+                  <TableCell align="right">{fmtNumber(r.conversions)}</TableCell>
+                  <TableCell align="right">{fmtCpa(r.cpa)}</TableCell>
+                </TableRow>
+              );
+            })}
         </TableBody>
       </Table>
       <TablePagination

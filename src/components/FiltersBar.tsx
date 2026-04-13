@@ -7,11 +7,12 @@ import { useAccounts } from "@/lib/useAccounts";
 import {
   ALL_ACCOUNT_ID,
   ALL_PLATFORM,
+  NAME_ID_PREFIX,
   useDashboardFilters,
 } from "@/lib/DashboardFiltersContext";
 
 export default function FiltersBar() {
-  const { platform, accountId, range, setPlatform, setAccount, setRange } = useDashboardFilters();
+  const { platform, accountId, accountName, range, setPlatform, setAccount, setRange } = useDashboardFilters();
   const { data: accounts = [], isLoading, isError } = useAccounts();
 
   const platformOptions = useMemo(() => {
@@ -27,11 +28,25 @@ export default function FiltersBar() {
       platform === ALL_PLATFORM
         ? accounts
         : accounts.filter((a) => a.platform.toLowerCase() === platform.toLowerCase());
-    return [
+    const opts: SelectOption[] = [
       { id: ALL_ACCOUNT_ID, label: "All Accounts" },
       ...filtered.map((a) => ({ id: a.id, label: a.name, hint: a.platform })),
     ];
-  }, [accounts, platform]);
+    // If the current selection came from a row click and isn't already represented,
+    // prepend it so the SearchableSelect can display it.
+    if (
+      accountId !== ALL_ACCOUNT_ID &&
+      accountName &&
+      !opts.some((o) => o.id === accountId)
+    ) {
+      opts.splice(1, 0, {
+        id: accountId,
+        label: accountName,
+        hint: accountId.startsWith(NAME_ID_PREFIX) ? "from selection" : undefined,
+      });
+    }
+    return opts;
+  }, [accounts, platform, accountId, accountName]);
 
   const onAccountChange = (id: string) => {
     const picked = accountOptions.find((o) => o.id === id);
