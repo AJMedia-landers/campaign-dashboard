@@ -1,0 +1,22 @@
+@use "@/styles/variables" as *;
+@use "@/styles/reset" as *;
+@use "@/styles/mixins" as mixins;
+
+body {
+  background: $sand;
+  color: #2D2A28;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.app-card {
+  @include mixins.card;
+  padding: 12px;
+}
+
+.subtle {
+  @include mixins.muted;
+}
+
+.Mui-disabled {
+  opacity: 0.6;
+}
