@@ -15,8 +15,10 @@ import {
 import { fmtCurrency, fmtCpa, fmtNumber } from "@/lib/format";
 import { useSortable } from "@/lib/useSortable";
 import { useClientResults, type ClientRow } from "@/lib/useClientResults";
-import { fmtDate, useDashboardFilters } from "@/lib/DashboardFiltersContext";
+import { ALL_ACCOUNT_ID, fmtDate, useDashboardFilters } from "@/lib/DashboardFiltersContext";
 import { useTablePagination } from "@/lib/useTablePagination";
+import { useResizableColumns } from "@/lib/useResizableColumns";
+import ResizeHandle from "./ResizeHandle";
 
 const headSx = { bgcolor: "primary.main", color: "#fff", fontWeight: 700 };
 const sortSx = {
@@ -36,7 +38,7 @@ const selectedRowSx = {
 type SortKey = keyof ClientRow;
 
 export default function ClientResultsTable() {
-  const { platform, accountName, range, selectAccountByName, selectionSource, effectiveAccountFor } = useDashboardFilters();
+  const { platform, accountName, range, selectAccountByName, setAccount, selectionSource, effectiveAccountFor } = useDashboardFilters();
   const effective = effectiveAccountFor("client");
   const { data = [], isLoading, isError, error } = useClientResults({
     startDate: fmtDate(range.start),
@@ -55,24 +57,35 @@ export default function ClientResultsTable() {
     rowsPerPageOptions,
   } = useTablePagination(sorted.length);
   const visible = paginate(sorted);
+  const { widths, startResize } = useResizableColumns([320, 160, 180, 120]);
 
-  const header = (key: SortKey, label: string, align: "left" | "right" = "left") => (
-    <TableCell sx={{ ...headSx, ...sortSx }} align={align} sortDirection={sort?.key === key ? sort.dir : false}>
+  const header = (index: number, key: SortKey, label: string, align: "left" | "right" = "left") => (
+    <TableCell
+      sx={{ ...headSx, ...sortSx, position: "relative" }}
+      align={align}
+      sortDirection={sort?.key === key ? sort.dir : false}
+    >
       <TableSortLabel active={sort?.key === key} direction={sort?.key === key ? sort.dir : "desc"} onClick={() => toggle(key)}>
         {label}
       </TableSortLabel>
+      <ResizeHandle onMouseDown={startResize(index)} />
     </TableCell>
   );
 
   return (
     <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-      <Table size="small">
+      <Table size="small" sx={{ tableLayout: "fixed" }}>
+        <colgroup>
+          {widths.map((w, i) => (
+            <col key={i} style={{ width: `${w}px` }} />
+          ))}
+        </colgroup>
         <TableHead>
           <TableRow>
-            {header("account_name", "Account Name")}
-            {header("total_spent", "Total Spent", "right")}
-            {header("total_conversions", "Total Conversions", "right")}
-            {header("cpa", "CPA", "right")}
+            {header(0, "account_name", "Account Name")}
+            {header(1, "total_spent", "Total Spent", "right")}
+            {header(2, "total_conversions", "Total Conversions", "right")}
+            {header(3, "cpa", "CPA", "right")}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -108,7 +121,11 @@ export default function ClientResultsTable() {
                 <TableRow
                   key={r.account_name}
                   hover
-                  onClick={() => selectAccountByName(r.account_name, "client")}
+                  onClick={() =>
+                    isSelected
+                      ? setAccount(ALL_ACCOUNT_ID, null)
+                      : selectAccountByName(r.account_name, "client")
+                  }
                   sx={{
                     cursor: "pointer",
                     ...(isSelected ? selectedRowSx : {}),
