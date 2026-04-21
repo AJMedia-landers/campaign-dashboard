@@ -15,7 +15,7 @@ import {
 import { fmtCurrency, fmtCpa, fmtNumber } from "@/lib/format";
 import { useSortable } from "@/lib/useSortable";
 import { useClientResults, type ClientRow } from "@/lib/useClientResults";
-import { ALL_ACCOUNT_ID, fmtDate, useDashboardFilters } from "@/lib/DashboardFiltersContext";
+import { fmtDate, useDashboardFilters } from "@/lib/DashboardFiltersContext";
 import { useTablePagination } from "@/lib/useTablePagination";
 import { useResizableColumns } from "@/lib/useResizableColumns";
 import ResizeHandle from "./ResizeHandle";
@@ -38,13 +38,14 @@ const selectedRowSx = {
 type SortKey = keyof ClientRow;
 
 export default function ClientResultsTable() {
-  const { platform, accountName, range, selectAccountByName, setAccount, selectionSource, effectiveAccountFor } = useDashboardFilters();
-  const effective = effectiveAccountFor("client");
+  const { platform, accountNames, range, toggleAccountName, selectionSource, effectiveAccountsFor } =
+    useDashboardFilters();
+  const effective = effectiveAccountsFor("client");
   const { data = [], isLoading, isError, error } = useClientResults({
     startDate: fmtDate(range.start),
     endDate: fmtDate(range.end),
     platform: platform === "All" ? undefined : platform.toLowerCase(),
-    accountName: effective ?? undefined,
+    accountNames: effective,
   });
 
   const { sorted, sort, toggle } = useSortable<ClientRow, SortKey>(data, "total_spent", "desc");
@@ -116,16 +117,13 @@ export default function ClientResultsTable() {
           )}
           {!isLoading && !isError &&
             visible.map((r) => {
-              const isSelected = selectionSource === "client" && accountName === r.account_name;
+              const isSelected =
+                selectionSource === "client" && accountNames.includes(r.account_name);
               return (
                 <TableRow
                   key={r.account_name}
                   hover
-                  onClick={() =>
-                    isSelected
-                      ? setAccount(ALL_ACCOUNT_ID, null)
-                      : selectAccountByName(r.account_name, "client")
-                  }
+                  onClick={() => toggleAccountName(r.account_name, "client")}
                   sx={{
                     cursor: "pointer",
                     ...(isSelected ? selectedRowSx : {}),

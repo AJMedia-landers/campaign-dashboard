@@ -16,7 +16,7 @@ import {
 import { fmtCurrency, fmtCpa, fmtNumber } from "@/lib/format";
 import { useSortable } from "@/lib/useSortable";
 import { useHeadlineResults, type HeadlineRow } from "@/lib/useHeadlineResults";
-import { ALL_ACCOUNT_ID, fmtDate, useDashboardFilters } from "@/lib/DashboardFiltersContext";
+import { fmtDate, useDashboardFilters } from "@/lib/DashboardFiltersContext";
 import { useTablePagination } from "@/lib/useTablePagination";
 import { useResizableColumns } from "@/lib/useResizableColumns";
 import ResizeHandle from "./ResizeHandle";
@@ -40,20 +40,21 @@ const sortSx = {
 type SortKey = keyof HeadlineRow;
 
 export default function HeadlinesTable() {
-  const { platform, accountName, range, selectAccountByName, setAccount, selectionSource, effectiveAccountFor } = useDashboardFilters();
-  const effective = effectiveAccountFor("headlines");
+  const { platform, accountNames, range, toggleAccountName, selectionSource, effectiveAccountsFor } =
+    useDashboardFilters();
+  const effective = effectiveAccountsFor("headlines");
 
-  // Track the *specific* clicked row (by headline string), not just the account,
+  // Track the specific clicked rows (by headline string), not just the account,
   // so duplicates of the same top-account don't all light up.
-  const [selectedHeadline, setSelectedHeadline] = useState<string | null>(null);
+  const [selectedHeadlines, setSelectedHeadlines] = useState<Set<string>>(new Set());
   useEffect(() => {
-    if (selectionSource !== "headlines") setSelectedHeadline(null);
-  }, [selectionSource, accountName]);
+    if (selectionSource !== "headlines") setSelectedHeadlines(new Set());
+  }, [selectionSource, accountNames]);
   const { data = [], isLoading, isError, error } = useHeadlineResults({
     startDate: fmtDate(range.start),
     endDate: fmtDate(range.end),
     platform: platform === "All" ? undefined : platform.toLowerCase(),
-    accountName: effective ?? undefined,
+    accountNames: effective,
   });
 
   const { sorted, sort, toggle } = useSortable<HeadlineRow, SortKey>(data, "spent", "desc");
@@ -130,20 +131,20 @@ export default function HeadlinesTable() {
           {!isLoading && !isError &&
             visible.map((r, idx) => {
               const clickable = !!r.account_name;
-              const isSelected = r.headline === selectedHeadline;
+              const isSelected = selectedHeadlines.has(r.headline);
               return (
                 <TableRow
                   key={`${startIndex + idx}-${r.headline}`}
                   hover
                   onClick={() => {
                     if (!clickable) return;
-                    if (isSelected) {
-                      setSelectedHeadline(null);
-                      setAccount(ALL_ACCOUNT_ID, null);
-                    } else {
-                      setSelectedHeadline(r.headline);
-                      selectAccountByName(r.account_name!, "headlines");
-                    }
+                    setSelectedHeadlines((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(r.headline)) next.delete(r.headline);
+                      else next.add(r.headline);
+                      return next;
+                    });
+                    toggleAccountName(r.account_name!, "headlines");
                   }}
                   sx={{
                     cursor: clickable ? "pointer" : "default",

@@ -4,15 +4,11 @@ import { useMemo } from "react";
 import DateRangePicker from "./DateRangePicker";
 import SearchableSelect, { SelectOption } from "./SearchableSelect";
 import { useAccounts } from "@/lib/useAccounts";
-import {
-  ALL_ACCOUNT_ID,
-  ALL_PLATFORM,
-  NAME_ID_PREFIX,
-  useDashboardFilters,
-} from "@/lib/DashboardFiltersContext";
+import { ALL_PLATFORM, useDashboardFilters } from "@/lib/DashboardFiltersContext";
 
 export default function FiltersBar() {
-  const { platform, accountId, accountName, range, setPlatform, setAccount, setRange } = useDashboardFilters();
+  const { platform, accountNames, range, setPlatform, setAccountNames, clearAccounts, setRange } =
+    useDashboardFilters();
   const { data: accounts = [], isLoading, isError } = useAccounts();
 
   const platformOptions = useMemo(() => {
@@ -23,35 +19,27 @@ export default function FiltersBar() {
     return [ALL_PLATFORM, ...Array.from(set).sort()];
   }, [accounts]);
 
+  // Options are keyed by account *name* so multi-select values line up with
+  // the `account_name` filter the API expects.
   const accountOptions = useMemo<SelectOption[]>(() => {
     const filtered =
       platform === ALL_PLATFORM
         ? accounts
         : accounts.filter((a) => a.platform.toLowerCase() === platform.toLowerCase());
-    const opts: SelectOption[] = [
-      { id: ALL_ACCOUNT_ID, label: "All Accounts" },
-      ...filtered.map((a) => ({ id: a.id, label: a.name, hint: a.platform })),
-    ];
-    // If the current selection came from a row click and isn't already represented,
-    // prepend it so the SearchableSelect can display it.
-    if (
-      accountId !== ALL_ACCOUNT_ID &&
-      accountName &&
-      !opts.some((o) => o.id === accountId)
-    ) {
-      opts.splice(1, 0, {
-        id: accountId,
-        label: accountName,
-        hint: accountId.startsWith(NAME_ID_PREFIX) ? "from selection" : undefined,
-      });
+    const opts: SelectOption[] = filtered.map((a) => ({
+      id: a.name,
+      label: a.name,
+      hint: a.platform,
+    }));
+    // If a row-click added an account that isn't in the loaded list
+    // (e.g., filtered out by platform), surface it so the select can show/toggle it.
+    for (const name of accountNames) {
+      if (!opts.some((o) => o.id === name)) {
+        opts.unshift({ id: name, label: name, hint: "from selection" });
+      }
     }
     return opts;
-  }, [accounts, platform, accountId, accountName]);
-
-  const onAccountChange = (id: string) => {
-    const picked = accountOptions.find((o) => o.id === id);
-    setAccount(id, picked?.label ?? null);
-  };
+  }, [accounts, platform, accountNames]);
 
   return (
     <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap", mb: 2 }}>
@@ -81,10 +69,13 @@ export default function FiltersBar() {
       </Select>
 
       <SearchableSelect
+        multiple
         label="Accounts"
-        value={accountId}
+        value={accountNames}
         options={accountOptions}
-        onChange={onAccountChange}
+        onChange={(ids) => setAccountNames(ids)}
+        onClear={clearAccounts}
+        allLabel="All Accounts"
         disabled={isLoading}
         placeholder="Search accounts…"
         minWidth={260}

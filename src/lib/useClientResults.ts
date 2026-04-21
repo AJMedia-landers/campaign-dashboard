@@ -12,7 +12,7 @@ export type ClientResultsFilters = {
   startDate?: string;
   endDate?: string;
   platform?: string;
-  accountName?: string;
+  accountNames?: string[];
 };
 
 async function fetchClientResults(f: ClientResultsFilters): Promise<ClientRow[]> {
@@ -20,7 +20,7 @@ async function fetchClientResults(f: ClientResultsFilters): Promise<ClientRow[]>
   if (f.startDate) qs.set("start_date", f.startDate);
   if (f.endDate) qs.set("end_date", f.endDate);
   if (f.platform) qs.set("platform", f.platform);
-  if (f.accountName) qs.set("account_name", f.accountName);
+  for (const name of f.accountNames ?? []) qs.append("account_name", name);
 
   const res = await fetch(`/api/client-results?${qs.toString()}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to load client results (${res.status})`);

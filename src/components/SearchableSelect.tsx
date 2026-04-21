@@ -3,6 +3,7 @@ import * as React from "react";
 import {
   Box,
   Button,
+  Checkbox,
   InputAdornment,
   List,
   ListItemButton,
@@ -21,35 +22,55 @@ export type SelectOption = {
   hint?: string;
 };
 
-type Props = {
+type SingleProps = {
   label: string;
-  value: string;
   options: SelectOption[];
-  onChange: (id: string) => void;
   disabled?: boolean;
   minWidth?: number;
   listWidth?: number;
   placeholder?: string;
   emptyText?: string;
+  multiple?: false;
+  value: string;
+  onChange: (id: string) => void;
 };
 
-export default function SearchableSelect({
-  label,
-  value,
-  options,
-  onChange,
-  disabled,
-  minWidth = 260,
-  listWidth = 320,
-  placeholder = "Search…",
-  emptyText = "No results",
-}: Props) {
+type MultipleProps = {
+  label: string;
+  options: SelectOption[];
+  disabled?: boolean;
+  minWidth?: number;
+  listWidth?: number;
+  placeholder?: string;
+  emptyText?: string;
+  multiple: true;
+  value: string[];
+  onChange: (ids: string[]) => void;
+  /** Label shown in the button when nothing is selected (e.g., "All Accounts"). */
+  allLabel?: string;
+  /** Optional action rendered at the top of the list (e.g., a "Clear selection" link). */
+  onClear?: () => void;
+};
+
+type Props = SingleProps | MultipleProps;
+
+export default function SearchableSelect(props: Props) {
+  const {
+    label,
+    options,
+    disabled,
+    minWidth = 260,
+    listWidth = 320,
+    placeholder = "Search…",
+    emptyText = "No results",
+  } = props;
+  const multiple = props.multiple === true;
+
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   const [query, setQuery] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const open = Boolean(anchorEl);
-  const selected = options.find((o) => o.id === value);
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -70,10 +91,39 @@ export default function SearchableSelect({
     setQuery("");
   };
 
+  const isSelected = (id: string) =>
+    multiple ? (props as MultipleProps).value.includes(id) : (props as SingleProps).value === id;
+
   const pick = (id: string) => {
-    onChange(id);
-    handleClose();
+    if (multiple) {
+      const current = (props as MultipleProps).value;
+      const next = current.includes(id) ? current.filter((v) => v !== id) : [...current, id];
+      (props as MultipleProps).onChange(next);
+      // Keep popover open so users can pick more.
+    } else {
+      (props as SingleProps).onChange(id);
+      handleClose();
+    }
   };
+
+  const displayText = React.useMemo(() => {
+    if (multiple) {
+      const value = (props as MultipleProps).value;
+      const allLabel = (props as MultipleProps).allLabel ?? "All";
+      if (value.length === 0) return allLabel;
+      if (value.length === 1) {
+        const opt = options.find((o) => o.id === value[0]);
+        return opt?.label ?? value[0];
+      }
+      const first = options.find((o) => o.id === value[0])?.label ?? value[0];
+      return `${first} +${value.length - 1}`;
+    }
+    const value = (props as SingleProps).value;
+    return options.find((o) => o.id === value)?.label ?? "";
+  }, [multiple, options, props]);
+
+  const onClear = multiple ? (props as MultipleProps).onClear : undefined;
+  const multipleValueLen = multiple ? (props as MultipleProps).value.length : 0;
 
   return (
     <>
@@ -98,7 +148,7 @@ export default function SearchableSelect({
       >
         <span style={{ color: "rgba(0,0,0,0.6)", whiteSpace: "nowrap" }}>
           {label}:{" "}
-          <b style={{ color: "#2D2A28" }}>{selected?.label ?? ""}</b>
+          <b style={{ color: "#2D2A28" }}>{displayText}</b>
         </span>
       </Button>
 
@@ -127,6 +177,32 @@ export default function SearchableSelect({
             }}
           />
         </Box>
+        {multiple && onClear && multipleValueLen > 0 && (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              px: 1.5,
+              py: 0.75,
+              borderBottom: 1,
+              borderColor: "divider",
+            }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              {multipleValueLen} selected
+            </Typography>
+            <Button
+              size="small"
+              onClick={() => {
+                onClear();
+              }}
+              sx={{ textTransform: "none" }}
+            >
+              Clear
+            </Button>
+          </Box>
+        )}
         <List sx={{ maxHeight: 320, overflowY: "auto", py: 0 }}>
           {filtered.length === 0 ? (
             <Box sx={{ p: 2, textAlign: "center" }}>
@@ -136,15 +212,25 @@ export default function SearchableSelect({
             </Box>
           ) : (
             filtered.map((o) => {
-              const isSelected = o.id === value;
+              const selected = isSelected(o.id);
               return (
-                <ListItemButton key={o.id} selected={isSelected} onClick={() => pick(o.id)} dense>
+                <ListItemButton key={o.id} selected={selected} onClick={() => pick(o.id)} dense>
+                  {multiple && (
+                    <Checkbox
+                      edge="start"
+                      checked={selected}
+                      tabIndex={-1}
+                      disableRipple
+                      size="small"
+                      sx={{ mr: 1, p: 0.5 }}
+                    />
+                  )}
                   <ListItemText
                     primary={o.label}
                     secondary={o.hint}
-                    primaryTypographyProps={{ sx: { fontWeight: isSelected ? 600 : 400 } }}
+                    primaryTypographyProps={{ sx: { fontWeight: selected ? 600 : 400 } }}
                   />
-                  {isSelected && <CheckIcon fontSize="small" color="primary" />}
+                  {!multiple && selected && <CheckIcon fontSize="small" color="primary" />}
                 </ListItemButton>
               );
             })

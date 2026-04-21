@@ -41,25 +41,24 @@ function previousPeriod(start: Dayjs, end: Dayjs) {
 }
 
 export function useSummary() {
-  const { range, platform, accountName } = useDashboardFilters();
+  const { range, platform, accountNames } = useDashboardFilters();
 
   const { start: prevStart, end: prevEnd } = previousPeriod(range.start, range.end);
 
   const platformParam = platform === "All" ? undefined : platform.toLowerCase();
-  const accountParam = accountName ?? undefined;
 
   const current = useClientResults({
     startDate: fmtDate(range.start),
     endDate: fmtDate(range.end),
     platform: platformParam,
-    accountName: accountParam,
+    accountNames,
   });
 
   const previous = useClientResults({
     startDate: fmtDate(prevStart),
     endDate: fmtDate(prevEnd),
     platform: platformParam,
-    accountName: accountParam,
+    accountNames,
   });
 
   const currTotals = computeTotals(current.data ?? []);

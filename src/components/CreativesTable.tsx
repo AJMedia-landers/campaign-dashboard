@@ -18,7 +18,7 @@ import BrokenImageIcon from "@mui/icons-material/BrokenImage";
 import { fmtCurrency, fmtCpa, fmtNumber } from "@/lib/format";
 import { useSortable } from "@/lib/useSortable";
 import { useCreativeResults, type CreativeRow } from "@/lib/useCreativeResults";
-import { ALL_ACCOUNT_ID, fmtDate, useDashboardFilters } from "@/lib/DashboardFiltersContext";
+import { fmtDate, useDashboardFilters } from "@/lib/DashboardFiltersContext";
 import { useTablePagination } from "@/lib/useTablePagination";
 import { toDriveThumbnail } from "@/lib/driveThumbnail";
 import { useResizableColumns } from "@/lib/useResizableColumns";
@@ -42,15 +42,15 @@ const selectedRowSx = {
 type SortKey = Exclude<keyof CreativeRow, "file_url">;
 
 export default function CreativesTable() {
-  const { platform, accountName, range, selectAccountByName, setAccount, selectionSource, effectiveAccountFor } =
+  const { platform, accountNames, range, toggleAccountName, selectionSource, effectiveAccountsFor } =
     useDashboardFilters();
-  const effective = effectiveAccountFor("creatives");
+  const effective = effectiveAccountsFor("creatives");
 
   const { data = [], isLoading, isError, error } = useCreativeResults({
     startDate: fmtDate(range.start),
     endDate: fmtDate(range.end),
     platform: platform === "All" ? undefined : platform.toLowerCase(),
-    accountName: effective ?? undefined,
+    accountNames: effective,
   });
 
   const { sorted, sort, toggle } = useSortable<CreativeRow, SortKey>(data, "spent", "desc");
@@ -66,11 +66,11 @@ export default function CreativesTable() {
   const startIndex = rowsPerPage === -1 ? 0 : page * rowsPerPage;
   const { widths, startResize } = useResizableColumns([48, 160, 320, 140, 140, 120]);
 
-  // Track the specific clicked creative (by file_url) so duplicates don't all light up.
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  // Track the specific clicked creatives (by file_url) so duplicates don't all light up.
+  const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   useEffect(() => {
-    if (selectionSource !== "creatives") setSelectedImage(null);
-  }, [selectionSource, accountName]);
+    if (selectionSource !== "creatives") setSelectedImages(new Set());
+  }, [selectionSource, accountNames]);
 
   const header = (index: number, key: SortKey, label: string, align: "left" | "right" = "left") => (
     <TableCell
@@ -138,20 +138,23 @@ export default function CreativesTable() {
             visible.map((r, idx) => {
               const rowKey = `${r.file_url ?? "no-img"}::${r.account_name ?? "no-acc"}::${startIndex + idx}`;
               const clickable = !!r.account_name;
-              const isSelected = !!r.file_url && r.file_url === selectedImage;
+              const isSelected = !!r.file_url && selectedImages.has(r.file_url);
               return (
                 <TableRow
                   key={rowKey}
                   hover
                   onClick={() => {
                     if (!clickable) return;
-                    if (isSelected) {
-                      setSelectedImage(null);
-                      setAccount(ALL_ACCOUNT_ID, null);
-                    } else {
-                      if (r.file_url) setSelectedImage(r.file_url);
-                      selectAccountByName(r.account_name!, "creatives");
+                    if (r.file_url) {
+                      const url = r.file_url;
+                      setSelectedImages((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(url)) next.delete(url);
+                        else next.add(url);
+                        return next;
+                      });
                     }
+                    toggleAccountName(r.account_name!, "creatives");
                   }}
                   sx={{
                     cursor: clickable ? "pointer" : "default",

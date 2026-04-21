@@ -8,13 +8,13 @@ import { fmtDate, useDashboardFilters } from "@/lib/DashboardFiltersContext";
 
 export default function SummaryCards() {
   const { current, changePct, isLoading } = useSummary();
-  const { range, platform, accountName } = useDashboardFilters();
+  const { range, platform, accountNames } = useDashboardFilters();
 
   const { data: daily = [] } = useDailyTotals({
     startDate: fmtDate(range.start),
     endDate: fmtDate(range.end),
     platform: platform === "All" ? undefined : platform.toLowerCase(),
-    accountName: accountName ?? undefined,
+    accountNames,
   });
 
   const trends = useMemo(

@@ -4,7 +4,7 @@ import SummaryCards from "@/components/SummaryCards";
 import ClientResultsTable from "@/components/ClientResultsTable";
 import HeadlinesTable from "@/components/HeadlinesTable";
 import CreativesTable from "@/components/CreativesTable";
-import { lastSync } from "@/data/mockDashboard";
+import LastSyncIndicator from "@/components/LastSyncIndicator";
 import { DashboardFiltersProvider } from "@/lib/DashboardFiltersContext";
 
 export default function DashboardHome() {
@@ -17,14 +17,7 @@ export default function DashboardHome() {
         <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main" }}>
           NET Client Results
         </Typography>
-        <Box sx={{ textAlign: "right" }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-            Last Sync
-          </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {lastSync}
-          </Typography>
-        </Box>
+        <LastSyncIndicator />
       </Box>
 
       <SummaryCards />
