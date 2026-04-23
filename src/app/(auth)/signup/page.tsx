@@ -7,6 +7,8 @@ import Link from "next/link";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
+const ALLOWED_DOMAIN = "ajmedia.io";
+
 export default function SignUpPage() {
   const router = useRouter();
 
@@ -22,6 +24,13 @@ export default function SignUpPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr(null);
+
+    const domain = email.split("@")[1]?.toLowerCase();
+    if (domain !== ALLOWED_DOMAIN) {
+      setErr(`Only @${ALLOWED_DOMAIN} email addresses are allowed`);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/auth/signup", {
@@ -32,7 +41,9 @@ export default function SignUpPage() {
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.message || "Sign up failed");
       setOkOpen(true);
-      setTimeout(() => router.replace("/"), 700);
+      setTimeout(() => {
+        router.replace(`/verify?email=${encodeURIComponent(email)}`);
+      }, 700);
     } catch (e: any) {
       setErr(e.message || "Sign up failed");
     } finally {
@@ -64,6 +75,7 @@ export default function SignUpPage() {
           value={email}
           onChange={e=>setEmail(e.target.value)}
           required
+          helperText={`Only @${ALLOWED_DOMAIN} email addresses are allowed`}
         />
         <TextField
           label="Password" required
@@ -104,7 +116,7 @@ export default function SignUpPage() {
       </Typography>
       <Snackbar open={okOpen} autoHideDuration={1200} onClose={() => setOkOpen(false)}>
         <Alert severity="success" variant="filled" onClose={() => setOkOpen(false)}>
-          Account created!
+          Check your email for a verification code
         </Alert>
       </Snackbar>
     </Box>
